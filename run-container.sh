@@ -60,16 +60,24 @@ if [ -f "$BASHRC" ]; then
     if ! grep -q '.env.singularity' "$BASHRC"; then
         echo '[ -f ~/.env.singularity ] && source ~/.env.singularity' >> "$BASHRC"
     fi
+    if ! grep -q 'export PS1' "$BASHRC"; then
+        echo "export PS1='\u@\h:\W$ '" >> "$BASHRC"
+    fi
 else
     echo '[ -f ~/.env.singularity ] && source ~/.env.singularity' > "$BASHRC"
+    echo "export PS1='\u@\h:\W$ '" >> "$BASHRC"
 fi
 
 if [ -f "$BASH_PROFILE" ]; then
     if ! grep -q '.env.singularity' "$BASH_PROFILE"; then
         echo '[ -f ~/.env.singularity ] && source ~/.env.singularity' >> "$BASH_PROFILE"
     fi
+    if ! grep -q 'export PS1' "$BASH_PROFILE"; then
+        echo "export PS1='\u@\h:\W$ '" >> "$BASH_PROFILE"
+    fi
 else
     echo '[ -f ~/.env.singularity ] && source ~/.env.singularity' > "$BASH_PROFILE"
+    echo "export PS1='\u@\h:\W$ '" >> "$BASH_PROFILE"
 fi
 
 # Start Singularity container with SSH server
