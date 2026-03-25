@@ -30,26 +30,42 @@ chmod 600 "$SSH_DIR/authorized_keys"
 # Write compute node hostname for reference
 hostname > "$FAKE_HOME/.container_host"
 
-# Build environment string to pass into container
-# Include SLURM variables and custom variables
-ENV_VARS="MYSOFTWARE=$MYSOFTWARE,MYSCRATCH=$MYSCRATCH"
-ENV_VARS="$ENV_VARS,SLURM_NODELIST=$SLURM_NODELIST"
-ENV_VARS="$ENV_VARS,SLURM_NNODES=$SLURM_NNODES"
-ENV_VARS="$ENV_VARS,SLURM_NTASKS=$SLURM_NTASKS"
-ENV_VARS="$ENV_VARS,SLURM_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK"
-ENV_VARS="$ENV_VARS,SLURM_JOB_ID=$SLURM_JOB_ID"
-ENV_VARS="$ENV_VARS,SLURM_JOB_NAME=$SLURM_JOB_NAME"
-ENV_VARS="$ENV_VARS,SLURM_SUBMIT_DIR=$SLURM_SUBMIT_DIR"
-ENV_VARS="$ENV_VARS,SLURM_SUBMIT_HOST=$SLURM_SUBMIT_HOST"
-ENV_VARS="$ENV_VARS,SLURM_PARTITION=$SLURM_PARTITION"
-ENV_VARS="$ENV_VARS,SLURM_ACCOUNT=$SLURM_ACCOUNT"
-ENV_VARS="$ENV_VARS,SLURM_MEM_PER_NODE=$SLURM_MEM_PER_NODE"
-ENV_VARS="$ENV_VARS,SLURM_TIME_LIMIT=$SLURM_TIME_LIMIT"
-ENV_VARS="$ENV_VARS,SLURM_ARRAY_JOB_ID=$SLURM_ARRAY_JOB_ID"
+# Write environment variables to a file that can be sourced in the container
+# This ensures variables are available in SSH login shells
+cat > "$FAKE_HOME/.env.singularity" <<EOF
+export MYSOFTWARE=$MYSOFTWARE
+export MYSCRATCH=$MYSCRATCH
+export SLURM_NODELIST=$SLURM_NODELIST
+export SLURM_NNODES=$SLURM_NNODES
+export SLURM_NTASKS=$SLURM_NTASKS
+export SLURM_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK
+export SLURM_JOB_ID=$SLURM_JOB_ID
+export SLURM_JOB_NAME=$SLURM_JOB_NAME
+export SLURM_SUBMIT_DIR=$SLURM_SUBMIT_DIR
+export SLURM_SUBMIT_HOST=$SLURM_SUBMIT_HOST
+export SLURM_PARTITION=$SLURM_PARTITION
+export SLURM_ACCOUNT=$SLURM_ACCOUNT
+export SLURM_MEM_PER_NODE=$SLURM_MEM_PER_NODE
+export SLURM_TIME_LIMIT=$SLURM_TIME_LIMIT
+export SLURM_ARRAY_JOB_ID=$SLURM_ARRAY_JOB_ID
+EOF
+chmod 644 "$FAKE_HOME/.env.singularity"
+
+# Ensure .bashrc in fakeHome sources the environment variables for SSH logins
+BASHRC="$FAKE_HOME/.bashrc"
+if [ -f "$BASHRC" ]; then
+    if ! grep -q '.env.singularity' "$BASHRC"; then
+        echo '[ -f ~/.env.singularity ] && source ~/.env.singularity' >> "$BASHRC"
+    fi
+else
+    echo '[ -f ~/.env.singularity ] && source ~/.env.singularity' > "$BASHRC"
+fi
 
 # Start Singularity container with SSH server
+# Note: setonix singularity module handles environment variables for direct execution,
+# but not for SSH logins. The .env.singularity file handles variables for SSH sessions.
 CONTAINER_IMAGE="$CONTAINER_DIR/vscode-setonix.sif"
 
-singularity run --env "$ENV_VARS" --home="$FAKE_HOME" "$CONTAINER_IMAGE" &
+singularity run --home="$FAKE_HOME" "$CONTAINER_IMAGE" &
 echo "Container started with PID $!"
 echo "Hostname written to $FAKE_HOME/.container_host"
