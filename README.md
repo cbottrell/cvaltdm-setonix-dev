@@ -11,18 +11,79 @@ A containerized development environment using Ubuntu 22.04 with SSH server, allo
 - **Runs on compute nodes** via SLURM scheduler
 - **Accessible from Mac/Linux** via ProxyJump through login node
 
-## Setup: SSH Keys
+## Prerequisites
 
-**IMPORTANT:** Before running the container, you must add your SSH public keys to the `authorized_keys` section in `run-container.sh`. You need TWO keys:
+Before getting started, you'll need:
 
-1. **Your local machine public key** (to connect from your Mac/Linux to the container)
-2. **Your setonix public key** (to SSH from setonix into the container)
+- **Docker Desktop** on your local machine (with `docker buildx` support)
+- **Docker Hub account** (free at https://hub.docker.com)
+- SSH access to setonix
+- Your **setonix username** and **user ID (UID/GID)**
+
+## Step 1: Get Your setonix User Information
+
+**On setonix**, get your username and user IDs:
+
+```bash
+ssh setonix
+id
+# Output: uid=1234(myusername) gid=1234(myusername) groups=...
+```
+
+Save your `uid`, `gid`, and username - you'll need these in the next step.
+
+## Step 2: Customize the Dockerfile for Your User
+
+The `Dockerfile` contains hardcoded user information that **must** be customized for your account. Different users must rebuild the image with their own credentials.
+
+1. Clone this repository on your local machine:
+```bash
+git clone https://github.com/cbottrell/vscode-setonix.git
+cd vscode-setonix
+```
+
+2. Edit the `Dockerfile` and find this section (around line 22):
+```dockerfile
+# Create user with matching host UID/GID
+RUN groupadd -g 25420 bottrell && \
+    useradd -m -u 25420 -g 25420 -s /bin/bash bottrell
+```
+
+3. Replace with **YOUR** setonix credentials:
+```dockerfile
+# Create user with matching host UID/GID
+RUN groupadd -g <YOUR_GID> <YOUR_USERNAME> && \
+    useradd -m -u <YOUR_UID> -g <YOUR_GID> -s /bin/bash <YOUR_USERNAME>
+```
+
+Replace `<YOUR_UID>`, `<YOUR_GID>`, and `<YOUR_USERNAME>` with values from Step 1.
+
+## Step 3: Build and Push to Docker Hub
+
+Now build the Docker image with your credentials and push it to your Docker Hub account.
+
+**On your local machine:**
+
+```bash
+# Navigate to repo
+cd /path/to/vscode-setonix
+
+# Log in to Docker Hub
+docker login
+
+# Build and push (replace <DOCKER_USERNAME> with your Docker Hub username)
+docker buildx build --platform linux/amd64 --push -t <DOCKER_USERNAME>/vscode-setonix:latest .
+```
+
+**Note:** This builds for AMD64 (setonix architecture) and pushes directly to Docker Hub.
+
+## Step 4: Set Up SSH Keys
+
+Generate SSH keys (if needed) on both your local machine and setonix, then update `run-container.sh` with both public keys.
 
 ### Generate SSH Keys (if needed)
 
-If you don't already have SSH keys, generate them on both your local machine AND on setonix:
-
-**On your local machine (Mac/Linux):**
+**On your local machine:**
 ```bash
 # Generate a new Ed25519 key (recommended)
 ssh-keygen -t ed25519 -C "your-email@example.com"
@@ -33,15 +94,15 @@ ssh-keygen -t rsa -b 4096 -C "your-email@example.com"
 
 Press Enter at all prompts to use defaults. Your keys will be saved to `~/.ssh/id_ed25519` (or `~/.ssh/id_rsa`).
 
-**On setonix (via login node):**
+**On setonix:**
 ```bash
 ssh setonix
-ssh-keygen -t ed25519 -C "bottrell@setonix"
+ssh-keygen -t ed25519 -C "your-setonix-email@example.com"
 # Press Enter at all prompts
 exit
 ```
 
-### Add Your Public Keys to run-container.sh
+### Update run-container.sh with Your SSH Keys
 
 You **must** edit `run-container.sh` and replace the default `authorized_keys` with your own keys.
 
@@ -50,14 +111,14 @@ You **must** edit `run-container.sh` and replace the default `authorized_keys` w
 cat ~/.ssh/id_ed25519.pub  # or ~/.ssh/id_rsa.pub
 ```
 
-2. Get your setonix public key (from setonix):
+2. Get your setonix public key:
 ```bash
 ssh setonix
 cat ~/.ssh/id_ed25519.pub  # or ~/.ssh/id_rsa.pub
 exit
 ```
 
-3. Edit `run-container.sh` and update the `authorized_keys` section (around line 20):
+3. On your local machine, edit `run-container.sh` and update the `authorized_keys` section (around line 20):
 
 ```bash
 cat > "$SSH_DIR/authorized_keys" <<'EOF'
@@ -66,39 +127,58 @@ cat > "$SSH_DIR/authorized_keys" <<'EOF'
 EOF
 ```
 
-Each key should be on its own line. Replace the existing placeholder keys with your own keys.
+Each key should be on its own line.
 
-### Alternative: Auto-import Authorized Keys
-
-For a more user-friendly approach, copy your setonix `authorized_keys` to the container's fakeHome before running:
-
+4. Commit and push these changes back to the repo (or keep them local):
 ```bash
-mkdir -p "$MYSOFTWARE/fakeHome/.ssh"
-cp ~/.ssh/authorized_keys "$MYSOFTWARE/fakeHome/.ssh/authorized_keys"
-chmod 600 "$MYSOFTWARE/fakeHome/.ssh/authorized_keys"
+git add run-container.sh
+git commit -m "Add SSH keys for my account"
+git push  # Only if you have write access, or push to your own fork
 ```
 
-Then update `run-container.sh` to skip the hardcoded keys and use the copied file instead.
+## Step 5: Use on setonix
 
-## Quick Start
+Now that you've built and pushed your custom image, you can use it on setonix.
 
-### 1. Run the Container on setonix
-
-Submit the job to run the container on a compute node:
+### Clone Repository on setonix
 
 ```bash
-cd /software/projects/pawsey1149/bottrell/singularity/vscode-setonix
+ssh setonix
+mkdir -p $MYSOFTWARE/singularity
+cd $MYSOFTWARE/singularity
+git clone https://github.com/cbottrell/vscode-setonix.git
+cd vscode-setonix
+```
+
+If you forked the repo and updated SSH keys there, clone your fork instead.
+
+### Pull the Singularity Image
+
+```bash
+module load singularity/4.1.0-nompi
+cd $MYSOFTWARE/singularity/vscode-setonix
+
+# Pull and convert to Singularity format (use your Docker Hub username)
+singularity pull vscode-setonix.sif docker://<DOCKER_USERNAME>/vscode-setonix:latest
+```
+
+This creates `vscode-setonix.sif` (Singularity image file).
+
+### Submit Container Job
+
+```bash
+cd $MYSOFTWARE/singularity/vscode-setonix
 sbatch submit-container.sh
 ```
 
 Watch the output:
 ```bash
-tail -f dev.out
+tail -f dev-container.out
 ```
 
-**Note:** Running the container automatically creates a `$MYSOFTWARE/fakeHome` folder. This directory contains all VS Code cache and extensions that persist across container runtimes and rebuilds, enabling a consistent development environment.
+**Note:** Running the container automatically creates a `$MYSOFTWARE/fakeHome` folder. This directory contains all VS Code cache and extensions that persist across container runtimes and rebuilds.
 
-### 2. Get the Compute Node Hostname
+### Get the Compute Node Hostname
 
 ```bash
 bash get-container-host.sh
@@ -112,23 +192,25 @@ Update your ~/.ssh/vscode-setonix_config.txt vscode-setonix entry with:
     HostName nid001234
 ```
 
-### 3. Configure SSH on Your Mac
+## Step 6: Connect from Your Local Machine
 
-If you haven't already set up SSH for setonix, add to `~/.ssh/config`:
+### Configure SSH
+
+Add to `~/.ssh/config`:
 
 ```
 Include ~/.ssh/vscode-setonix_config.txt
 
 Host setonix.pawsey.org.au
     HostName setonix.pawsey.org.au
-    User bottrell
+    User <YOUR_SETONIX_USERNAME>
 
 Host setonix
     HostName setonix.pawsey.org.au
-    User bottrell
+    User <YOUR_SETONIX_USERNAME>
 
 Host nid*
-    User bottrell
+    User <YOUR_SETONIX_USERNAME>
     ProxyJump setonix
 ```
 
@@ -138,13 +220,13 @@ Then create or update `~/.ssh/vscode-setonix_config.txt`:
 Host vscode-setonix
     HostName nid001234          # Replace with output from get-container-host.sh
     Port 9300
-    User bottrell
+    User <YOUR_SETONIX_USERNAME>
     IdentityFile ~/.ssh/id_ed25519
     StrictHostKeyChecking no
     ProxyJump setonix
 ```
 
-### 4. Connect
+### Connect via SSH or VS Code
 
 **From terminal:**
 ```bash
@@ -155,47 +237,37 @@ ssh vscode-setonix
 - Install **Remote - SSH** extension
 - Open command palette: `Cmd+Shift+P` → "Remote-SSH: Connect to Host..."
 - Select `vscode-setonix`
-- Open a folder: `/software/projects/pawsey1149/bottrell/fakeHome`
+- Open a folder: `$MYSOFTWARE/fakeHome`
 
-## Building and Deploying the Container
+## Important Notes
 
-### Build on Mac
+### Why You Must Customize the Dockerfile
 
-The container must be built for AMD64 (setonix architecture):
+The `Dockerfile` creates a user inside the container that matches your setonix account. This ensures:
+- File permissions work correctly when the container mounts directories from setonix
+- SSH correctly identifies you inside the container
+- Container directories match your setonix home ownership
 
-```bash
-# Navigate to repo
-cd /path/to/vscode-setonix
+If you try to use someone else's pre-built image, you'll have permission issues accessing your files.
 
-# Build and push to Docker Hub
-docker buildx build --platform linux/amd64 --push -t cbottrell/vscode-setonix:latest .
-```
+### Different Users Need Different Images
 
-Requires: `docker buildx` (available in Docker Desktop)
+Each user must:
+1. Get their own setonix UID/GID
+2. Build their own Docker image with their credentials
+3. Push to their own Docker Hub account
+4. Pull that image to setonix
 
-### Pull on setonix
+This is by design to maintain proper permissions and security.
 
-After pushing to Docker Hub:
-
-```bash
-module load singularity/4.1.0-nompi
-cd /software/projects/pawsey1149/bottrell/singularity/vscode-setonix
-
-# Pull and convert to Singularity format
-singularity pull --force vscode-setonix.sif docker://cbottrell/vscode-setonix:latest
-```
-
-This creates `vscode-setonix.sif` (Singularity image file).
-
-## Files Overview
+## File Structure
 
 | File | Purpose |
 |------|---------|
-| `Dockerfile` | Container definition with SSH, Ubuntu 22.04 |
+| `Dockerfile` | Container definition - **must be customized** with your UID/GID/username |
 | `run-container.sh` | Startup script: sets up SSH keys, writes hostname, runs container |
-| `get-container-host.sh` | Helper to retrieve compute node hostname for SSH config |
 | `submit-container.sh` | SLURM batch script to submit container job |
-| `cvaltdm-dev.sif` | Singularity image (generated locally) |
+| `get-container-host.sh` | Helper to retrieve compute node hostname for SSH config |
 
 ## Container Details
 
@@ -208,15 +280,32 @@ This creates `vscode-setonix.sif` (Singularity image file).
   - StrictModes disabled (for mounted home)
   - Root login disabled
 
-- **User:** `bottrell` (UID 25420 - matches host for mounted filesystem)
-- **Home:** `/software/projects/pawsey1149/bottrell/fakeHome` (mounted from host)
+- **User:** Your setonix username (customized per user in Dockerfile)
+- **UID/GID:** Your setonix UID/GID (customized per user in Dockerfile)
+- **Home:** `$MYSOFTWARE/fakeHome` (mounted from host setonix)
 - **SSH Keys:** Copied to fakeHome's `.ssh/` by `run-container.sh`
 
 ## Troubleshooting
 
+**Docker build fails**
+- Ensure you updated the Dockerfile with your actual UID/GID values
+- Check that username, UID, and GID are all valid (no spaces)
+
 **SSH Connection Refused**
-- Verify container is running: `squeue -u bottrell`
+- Verify container is running: `squeue -u <YOUR_USERNAME>`
 - Check compute node name: `bash get-container-host.sh`
+- Ensure `run-container.sh` has your correct SSH public keys
+- Verify SSH config points to correct hostname from `get-container-host.sh`
+
+**Permission Denied on files**
+- Ensure your Dockerfile UID/GID matches your setonix UID/GID exactly
+- Rebuild and repush the image if you made changes to the Dockerfile
+- Pull the new image on setonix
+
+**Container fails to start**
+- Check the SLURM output: `cat dev-container.out`
+- Verify singularity module is loaded: `module list`
+- Ensure sufficient memory allocated in `submit-container.sh`
 - Update SSH config with correct hostname
 - Ensure `run-container.sh` completed (check `dev.out`)
 
@@ -256,7 +345,7 @@ RUN apt-get update && apt-get install -y \
 
 Then rebuild:
 ```bash
-docker buildx build --platform linux/amd64 --push -t cbottrell/cvaltdm-dev:latest .
+docker buildx build --platform linux/amd64 --push -t <DOCKER_HUB_USERNAME>/vscode-setonix:latest .
 ```
 
 ### Run Longer Jobs
@@ -272,12 +361,22 @@ Modify `submit-container.sh`:
 Modify `submit-container.sh`:
 
 ```bash
-#SBATCH --account=pawsey1149  # Change project code
+#SBATCH --account=$PAWSEY_PROJECT  # Uses environment variable set on setonix
 ```
 
 ## Project Info
 
-- **GitHub:** https://github.com/cbottrell/vscode-cvaltdm
-- **Docker Hub:** https://hub.docker.com/r/cbottrell/cvaltdm-dev
-- **Pawsey Project:** pawsey1149
+- **GitHub:** https://github.com/cbottrell/vscode-setonix
+- **Docker Hub:** https://hub.docker.com/r/<YOUR_DOCKER_HUB_USERNAME>/vscode-setonix
 - **Base Image:** Ubuntu 22.04 LTS
+- **SSH Port:** 9300
+
+## Customization Checklist
+
+Before first use, ensure you have:
+
+- [ ] Updated Dockerfile with your username/UID/GID
+- [ ] Updated `run-container.sh` with your public SSH keys
+- [ ] Built and pushed container to your Docker Hub account
+- [ ] Updated SSH config files with your username
+- [ ] Set environment variables: `MYSOFTWARE` and `PAWSEY_PROJECT`

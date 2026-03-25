@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --account=pawsey1149
+#SBATCH --account=$PAWSEY_PROJECT
 #SBATCH --partition=work
 #SBATCH --job-name=dev-container
 #SBATCH --ntasks=1
@@ -22,7 +22,7 @@ echo "Singularity version: $(singularity --version)"
 echo ""
 
 echo "Navigating to container directory..."
-cd /software/projects/pawsey1149/bottrell/singularity/vscode-setonix
+cd $MYSOFTWARE/singularity/vscode-setonix
 echo "Working directory: $(pwd)"
 echo ""
 

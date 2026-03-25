@@ -23,6 +23,9 @@ RUN ssh-keygen -A && \
     chmod 644 /etc/ssh/ssh_host_*_key.pub
 
 # Create user with matching host UID/GID
+# IMPORTANT: Replace USERNAME, UID, and GID with your values from setonix
+# Get your values: id <username>
+# Example: RUN groupadd -g 1000 myuser && useradd -m -u 1000 -g 1000 -s /bin/bash myuser
 RUN groupadd -g 25420 bottrell && \
     useradd -m -u 25420 -g 25420 -s /bin/bash bottrell
 

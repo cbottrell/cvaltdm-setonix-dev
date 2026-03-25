@@ -14,8 +14,8 @@ mkdir -p "$SSH_DIR"
 chmod 700 "$SSH_DIR"
 
 # Copy SSH keys from host home to fakeHome
-if [ -f /home/bottrell/.ssh/id_ed25519 ]; then
-    cp /home/bottrell/.ssh/id_ed25519 "$SSH_DIR/id_ed25519"
+if [ -f $HOME/.ssh/id_ed25519 ]; then
+    cp $HOME/.ssh/id_ed25519 "$SSH_DIR/id_ed25519"
     chmod 600 "$SSH_DIR/id_ed25519"
 fi
 
