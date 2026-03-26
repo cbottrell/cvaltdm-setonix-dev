@@ -148,8 +148,8 @@ Now that you've built and pushed your custom image, you can use it on setonix.
 ssh setonix
 mkdir -p $MYSOFTWARE/singularity
 cd $MYSOFTWARE/singularity
-git clone https://github.com/cbottrell/vscode-setonix.git
-cd vscode-setonix
+git clone https://github.com/cbottrell/cvaltdm-setonix-dev.git
+cd cvaltdm-setonix-dev
 ```
 
 If you forked the repo and updated SSH keys there, clone your fork instead.
@@ -255,11 +255,21 @@ Host vscode-setonix
 ssh vscode-setonix
 ```
 
+When you SSH in, you'll have access to:
+- `python` command (Python 3.13 via conda)
+- `jupyter` command (Jupyter Lab and notebooks)
+- All pre-installed packages: numpy, pandas, matplotlib
+- Your SLURM environment variables: `$MYSOFTWARE`, `$MYSCRATCH`, `$SLURM_*`
+
 **From VS Code:**
 - Install **Remote - SSH** extension
 - Open command palette: `Cmd+Shift+P` → "Remote-SSH: Connect to Host..."
 - Select `vscode-setonix`
 - Open a folder: `$MYSOFTWARE/fakeHome`
+- For Jupyter notebooks: Open a `.ipynb` file, then select the Python kernel
+  - Click "Select Kernel" → "Python Environments..."
+  - Choose `/opt/conda/bin/python` (Jupyter's conda environment)
+  - Now you can run cells with access to numpy, pandas, matplotlib, etc.
 
 ## Important Notes
 
@@ -293,8 +303,10 @@ This is by design to maintain proper permissions and security.
 
 ## Container Details
 
-- **Base OS:** Ubuntu 22.04 LTS
+- **Base Image:** Jupyter minimal-notebook (Python 3.13)
+- **Pre-installed packages:** numpy, pandas, matplotlib
 - **SSH Port:** 9300 (inside container)
+- **SSH Access:** Full terminal access with Python, Jupyter, and all conda packages available
 - **SSH Config:**
   - Key-based auth only
   - X11 forwarding enabled
