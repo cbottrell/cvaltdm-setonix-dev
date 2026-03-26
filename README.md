@@ -1,13 +1,14 @@
 # VS Code + Singularity Container for setonix
 
-A containerized development environment using Ubuntu 22.04 with SSH server, allowing remote VS Code connections to compute nodes on the Pawsey setonix supercomputer.
+A containerized development environment using Jupyter minimal-notebook (Python 3.13) with SSH server, allowing remote VS Code connections to compute nodes on the Pawsey setonix supercomputer.
 
 ## Features
 
 - **SSH-based access** on port 9300
 - **Key-based authentication** (no passwords)
 - **X11 forwarding** support
-- **Python 3.10** with pip
+- **Python 3.13** with pip and Jupyter Lab
+- **Pre-installed packages:** numpy, pandas, matplotlib
 - **Runs on compute nodes** via SLURM scheduler
 - **Accessible from Mac/Linux** via ProxyJump through login node
 
@@ -39,8 +40,8 @@ The `Dockerfile` contains hardcoded user information that **must** be customized
 
 1. Clone this repository on your local machine:
 ```bash
-git clone https://github.com/cbottrell/vscode-setonix.git
-cd vscode-setonix
+git clone https://github.com/cbottrell/cvaltdm-setonix-dev.git
+cd cvaltdm-setonix-dev
 ```
 
 2. Edit the `Dockerfile` and find this section (around line 22):
@@ -67,13 +68,13 @@ Now build the Docker image with your credentials and push it to your Docker Hub 
 
 ```bash
 # Navigate to repo
-cd /path/to/vscode-setonix
+cd /path/to/cvaltdm-setonix-dev
 
 # Log in to Docker Hub
 docker login
 
 # Build and push (replace <DOCKER_USERNAME> with your Docker Hub username)
-docker buildx build --platform linux/amd64 --push -t <DOCKER_USERNAME>/vscode-setonix:latest .
+docker buildx build --platform linux/amd64 --push -t <DOCKER_USERNAME>/cvaltdm-setonix-dev:latest .
 ```
 
 **Note:** This builds for AMD64 (setonix architecture) and pushes directly to Docker Hub.
@@ -157,13 +158,13 @@ If you forked the repo and updated SSH keys there, clone your fork instead.
 
 ```bash
 module load singularity/4.1.0-nompi
-cd $MYSOFTWARE/singularity/vscode-setonix
+cd $MYSOFTWARE/singularity/cvaltdm-setonix-dev
 
 # Pull and convert to Singularity format (use your Docker Hub username)
-singularity pull vscode-setonix.sif docker://<DOCKER_USERNAME>/vscode-setonix:latest
+singularity pull cvaltdm-setonix-dev.sif docker://<DOCKER_USERNAME>/cvaltdm-setonix-dev:latest
 ```
 
-This creates `vscode-setonix.sif` (Singularity image file).
+This creates `cvaltdm-setonix-dev.sif` (Singularity image file).
 
 ### Customize submit-container.sh with Your Pawsey Project
 

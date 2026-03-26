@@ -2,9 +2,9 @@
 
 module load singularity/4.1.0-nompi
 
-CONTAINER_DIR="$MYSOFTWARE/singularity/vscode-setonix"
-CONTAINER_IMAGE="$CONTAINER_DIR/vscode-setonix.sif"
-singularity pull --force "$CONTAINER_DIR/vscode-setonix.sif" docker://cbottrell/vscode-setonix:latest
+CONTAINER_DIR="$MYSOFTWARE/singularity/cvaltdm-setonix-dev"
+CONTAINER_IMAGE="$CONTAINER_DIR/cvaltdm-setonix-dev.sif"
+singularity pull --force "$CONTAINER_DIR/cvaltdm-setonix-dev.sif" docker://cbottrell/cvaltdm-setonix-dev:latest
 
 # Setup SSH in fakeHome
 FAKE_HOME="$MYSOFTWARE/fakeHome"
@@ -83,7 +83,7 @@ fi
 # Start Singularity container with SSH server
 # Note: setonix singularity module handles environment variables for direct execution,
 # but not for SSH logins. The .env.singularity file handles variables for SSH sessions.
-CONTAINER_IMAGE="$CONTAINER_DIR/vscode-setonix.sif"
+CONTAINER_IMAGE="$CONTAINER_DIR/cvaltdm-setonix-dev.sif"
 
 singularity run --home="$FAKE_HOME" "$CONTAINER_IMAGE" &
 echo "Container started with PID $!"
