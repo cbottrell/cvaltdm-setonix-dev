@@ -33,6 +33,10 @@ hostname > "$FAKE_HOME/.container_host"
 # Write environment variables to a file that can be sourced in the container
 # This ensures variables are available in SSH login shells
 cat > "$FAKE_HOME/.env.singularity" <<EOF
+# Conda/Python environment
+export PATH="/opt/conda/bin:\$PATH"
+
+# SLURM environment variables
 export MYSOFTWARE=$MYSOFTWARE
 export MYSCRATCH=$MYSCRATCH
 export SLURM_NODELIST=$SLURM_NODELIST
